@@ -7,7 +7,7 @@ def read_file(filename):
     f = open(filename, 'rb')
     msg = ''
     for line in f:
-        msg += line.decode()  # декодирование строки байтов в строковый объект
+        msg += line.decode('ISO-8859-1')  # декодирование строки байтов в строковый объект
     f.close()
     return msg
 
@@ -15,7 +15,7 @@ def read_file(filename):
 def write_file(filename, msg):
     f = open(filename, 'wb')
     for symb in msg:
-        bt = symb.encode()  # кодирование строки в байты
+        bt = symb.encode('ISO-8859-1')  # кодирование строки в байты
         f.write(bt)
     f.close()
 
