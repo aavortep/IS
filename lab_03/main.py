@@ -272,7 +272,7 @@ def decipher(msg, keys):
         block_result = end_perm(ip_res)
         for i in range(0, len(block_result), 8):
             result.append(block_result[i: i + 8])
-    return result
+    return bit_decode(result)
 
 
 if __name__ == '__main__':
