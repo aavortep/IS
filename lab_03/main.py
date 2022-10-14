@@ -18,14 +18,21 @@ def write_file(filename, msg):
     f.close()
 
 
-# Преобразование строки в массив бит
-def bit_encode(s):
+def replace(msg):
+    for i in range(len(msg)):
+        if msg[i] == "11011010":
+            msg[i] = "00001010"
+    return msg
+
+
+# Преобразование строки в двоичный код
+def bit_encode(s: str):
     return bitarray(
         ''.join([bin(int('1' + hex(c)[2:], 16))[3:]
                  for c in s.encode('utf-8')])).to01()
 
 
-# Преобразование массива бит в строку
+# Преобразование двоичного кода в строку
 def bit_decode(s):
     return ''.join([chr(i) for i in [int(b, 2) for b in s]])
 
@@ -254,7 +261,8 @@ def encipher(msg, keys):
             new_left = right
             new_right = xor(left, feistel(right, keys[i]))
             ip_res = new_left + new_right
-        block_result = end_perm(ip_res)
+        block_result = ip_res[32:] + ip_res[:32]
+        block_result = end_perm(block_result)
         result += str(hex(int(block_result.encode(), 2)))
     return result
 
@@ -264,14 +272,18 @@ def decipher(msg, keys):
     blocks64 = split_decode_input(msg)
     for block in blocks64:
         ip_res = init_perm(block)
-        for i in range(15, 0, -1):
+        for i in range(15, -1, -1):
             left, right = ip_res[:32], ip_res[32:]
-            new_right = left
-            new_left = xor(right, feistel(left, keys[i]))
+            new_left = right
+            new_right = xor(left, feistel(right, keys[i]))
             ip_res = new_left + new_right
-        block_result = end_perm(ip_res)
+        block_result = ip_res[32:] + ip_res[:32]
+        block_result = end_perm(block_result)
         for i in range(0, len(block_result), 8):
             result.append(block_result[i: i + 8])
+    result = replace(result)
+    while result[-1] == "00000000":
+        result.pop()
     return bit_decode(result)
 
 
