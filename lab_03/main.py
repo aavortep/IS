@@ -13,22 +13,16 @@ def read_file(filename):
 def write_file(filename, msg):
     f = open(filename, 'wb')
     for symb in msg:
-        bt = symb.encode('ISO-8859-1')  # кодирование строки в байты
+        bt = symb.encode('utf-8')  # кодирование строки в байты
         f.write(bt)
     f.close()
-
-
-def replace(msg):
-    for i in range(len(msg)):
-        if msg[i] == "11011010":
-            msg[i] = "00001010"
-    return msg
 
 
 # Преобразование строки в двоичный код
 def bit_encode(s: str):
     to_hex = ''
-    for c in s.encode('utf-8'):
+    for c in s:
+        c = ord(c)
         hexed = hex(c)[2:]
         if len(hexed) == 1:
             hexed = '0' + hexed
@@ -39,7 +33,11 @@ def bit_encode(s: str):
 
 # Преобразование двоичного кода в строку
 def bit_decode(s):
-    return ''.join([chr(i) for i in [int(b, 2) for b in s]])
+    res = ''
+    for b in s:
+        to_int = int(b, 2)
+        res += chr(to_int)  # пытается использовать кодировку 1252 вместо 1251!!!
+    return res
 
 
 #  Разделить строку на группы по 64 бит
@@ -256,29 +254,29 @@ def end_perm(msg64):
 def encipher(msg, keys):
     result = ""
     blocks64 = split_encode_input(msg)
-    print(blocks64)
+    #write_file("input_log.txt", blocks64)
     for block in blocks64:
-        print("=====================")
-        print("Блок текста до шифровки: ", block)
+        #print("=====================")
+        #print("Блок текста до шифровки: ", block)
         ip_res = init_perm(block)
-        print("Начальная перестановка: ", ip_res)
+        #print("Начальная перестановка: ", ip_res)
         left, right = ip_res[:32], ip_res[32:]
         for i in range(16):
-            print("------------------------")
-            print("Ключ: ", keys[i])
+            #print("------------------------")
+            #print("Ключ: ", keys[i])
             new_left = right
             new_right = xor(left, feistel(right, keys[i]))
-            print("Фейстель: ", feistel(right, keys[i]))
+            #print("Фейстель: ", feistel(right, keys[i]))
             left = new_left
             right = new_right
-            print("Новая левая половина: ", left)
-            print("Новая правая половина: ", right)
-        print("------------------------")
+            #print("Новая левая половина: ", left)
+            #print("Новая правая половина: ", right)
+        #print("------------------------")
         block_result = right + left
         block_result = end_perm(block_result)
-        print("Конечная перестановка: ", block_result)
+        #print("Конечная перестановка: ", block_result)
         result += str(hex(int(block_result.encode(), 2)))
-    print("=====================")
+    #print("=====================")
     return result
 
 
@@ -289,34 +287,60 @@ def decipher(msg, keys):
     #for i in range(len(msg) // 64):
         #blocks64.append(msg[i * 64: i * 64 + 64])
     for block in blocks64:
-        print("=====================")
-        print("Блок текста до расшифровки: ", block)
+        #print("=====================")
+        #print("Блок текста до расшифровки: ", block)
         ip_res = init_perm(block)
-        print("Начальная перестановка: ", ip_res)
+        #print("Начальная перестановка: ", ip_res)
         left, right = ip_res[:32], ip_res[32:]
         for i in range(15, -1, -1):
-            print("------------------------")
-            print("Ключ: ", keys[i])
+            #print("------------------------")
+            #print("Ключ: ", keys[i])
             new_left = right
             new_right = xor(left, feistel(right, keys[i]))
-            print("Фейстель: ", feistel(right, keys[i]))
+            #print("Фейстель: ", feistel(right, keys[i]))
             left = new_left
             right = new_right
-            print("Новая левая половина: ", left)
-            print("Новая правая половина: ", right)
-        print("------------------------")
+            #print("Новая левая половина: ", left)
+            #print("Новая правая половина: ", right)
+        #print("------------------------")
         block_result = right + left
         block_result = end_perm(block_result)
-        print("Конечная перестановка: ", block_result)
+        #print("Конечная перестановка: ", block_result)
         for i in range(0, len(block_result), 8):
             result.append(block_result[i: i + 8])
-    print("=====================")
-    print("Двоичная расшифровка: ", result)
+    #print("=====================")
+    #print("Двоичная расшифровка: ", result)
     #result = replace(result)
     while result[-1] == "00000000":
         result.pop()
-    decoded = bit_decode(result)
-    return decoded
+    #decoded = bit_decode(result)
+    return result
+
+
+def join_bytes(deciphered):
+    inds_to_delete = []
+    for i in range(len(deciphered) - 1):
+        # использовалась 16-битная кодировка
+        if deciphered[i][:3] == '110' and deciphered[i+1][:2] == '10':
+            deciphered[i] += deciphered[i+1]
+            inds_to_delete.append(i+1)
+    for i in range(len(deciphered) - 2):
+        # использовалась 24-битная кодировка
+        if deciphered[i][:4] == '1110' and deciphered[i+1][:2] == '10' and deciphered[i+2][:2] == '10':
+            deciphered[i] += deciphered[i+1] + deciphered[i+2]
+            inds_to_delete.append(i+1)
+            inds_to_delete.append(i+2)
+    for i in range(len(deciphered) - 3):
+        # использовалась 32-битная кодировка
+        if deciphered[i][:5] == '11110' and deciphered[i+1][:2] == '10' and deciphered[i+2][:2] == '10'\
+                and deciphered[i+3][:2] == '10':
+            deciphered[i] += deciphered[i+1] + deciphered[i+2] + deciphered[i+3]
+            inds_to_delete.append(i+1)
+            inds_to_delete.append(i+2)
+            inds_to_delete.append(i+3)
+    for i in range(len(inds_to_delete) - 1, -1, -1):
+        deciphered.pop(inds_to_delete[i])
+    return deciphered
 
 
 if __name__ == '__main__':
@@ -328,11 +352,14 @@ if __name__ == '__main__':
 
     encipher_msg = encipher(msg, keys)
     print("Зашифрованное сообщение: " + encipher_msg)
-    write_file(filename, encipher_msg)
+    #write_file(filename, encipher_msg)
 
     flag = input("Расшифровать сообщение? (y - да, n - нет):  ")
     if flag == "y":
-        msg = read_file(filename)
-        decipher_msg = decipher(msg, keys)
-        write_file(filename, decipher_msg)
+        #msg = read_file(filename)
+        decipher_msg = decipher(encipher_msg, keys)
+        #decipher_msg = join_bytes(decipher_msg)
+        decoded = bit_decode(decipher_msg)
+        write_file(filename, decoded)
+        #write_file("output_log.txt", decipher_msg)
         print("Расшифрованное сообщение: ", decipher_msg)
