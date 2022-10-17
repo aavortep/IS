@@ -5,7 +5,7 @@ def read_file(filename):
     f = open(filename, 'rb')
     msg = ''
     for line in f:
-        msg += line.decode('ISO-8859-1')  # декодирование строки байтов в строковый объект
+        msg += "".join(map(chr, line))  # декодирование строки байтов в строковый объект
     f.close()
     return msg
 
@@ -27,9 +27,14 @@ def replace(msg):
 
 # Преобразование строки в двоичный код
 def bit_encode(s: str):
-    return bitarray(
-        ''.join([bin(int('1' + hex(c)[2:], 16))[3:]
-                 for c in s.encode('utf-8')])).to01()
+    to_hex = ''
+    for c in s.encode('utf-8'):
+        hexed = hex(c)[2:]
+        if len(hexed) == 1:
+            hexed = '0' + hexed
+        to_hex += hexed
+    to_bin = ''.join([bin(int('1' + to_hex, 16))[3:]])
+    return bitarray(to_bin).to01()
 
 
 # Преобразование двоичного кода в строку
@@ -87,49 +92,33 @@ def key_permutation(key):
     return permutation(key, table)
 
 
+# сжимающая перестановка СР
+def compress_key(key):
+    table = (14, 17, 11, 24, 1, 5, 3, 28, 15, 6, 21, 10, 23, 19, 12, 4,
+             26, 8, 16, 7, 27, 20, 13, 2, 41, 52, 31, 37, 47, 55, 30, 40,
+             51, 45, 33, 48, 44, 49, 39, 56, 34, 53, 46, 42, 50, 36, 29, 32)
+    return permutation(key, table)
+
+
 # сдвиги ключей
 def shift_key(key):
     c0 = key[:28]
     d0 = key[28:]
     shift_table = (1, 2, 4, 6, 8, 10, 12, 14, 15, 17, 19, 21, 23, 25, 27, 28)
-    shifted_keys = []
+    round_keys = []
     for i in range(16):
         c0_shift = c0[shift_table[i]:] + c0[:shift_table[i]]
         d0_shift = d0[shift_table[i]:] + d0[:shift_table[i]]
-        shifted_keys.append(c0_shift + d0_shift)
-    return shifted_keys
-
-
-# сжимающая перестановка СР
-def compress_keys(keys):
-    compressed = []
-    table = (14, 17, 11, 24, 1, 5, 3, 28, 15, 6, 21, 10, 23, 19, 12, 4,
-             26, 8, 16, 7, 27, 20, 13, 2, 41, 52, 31, 37, 47, 55, 30, 40,
-             51, 45, 33, 48, 44, 49, 39, 56, 34, 53, 46, 42, 50, 36, 29, 32)
-    for key in keys:
-        compressed.append(permutation(key, table))
-    return compressed
+        key48 = compress_key(c0_shift + d0_shift)
+        round_keys.append(key48)
+    return round_keys
 
 
 # генерация раундовых ключей
-def gen_keys(key):
-    perm_key = key_permutation(key)
-    shifted_keys = shift_key(perm_key)
-    res_keys = compress_keys(shifted_keys)
+def gen_keys(key64):
+    key56 = key_permutation(key64)
+    res_keys = shift_key(key56)
     return res_keys
-
-
-# начальная перестановка IP
-def init_perm(msg64):
-    table = (58, 50, 42, 34, 26, 18, 10, 2,
-             60, 52, 44, 36, 28, 20, 12, 4,
-             62, 54, 46, 38, 30, 22, 14, 6,
-             64, 56, 48, 40, 32, 24, 16, 8,
-             57, 49, 41, 33, 25, 17, 9, 1,
-             59, 51, 43, 35, 27, 19, 11, 3,
-             61, 53, 45, 37, 29, 21, 13, 5,
-             63, 55, 47, 39, 31, 23, 15, 7)
-    return permutation(msg64, table)
 
 
 # расширяющая перестановка Е
@@ -238,6 +227,19 @@ def feistel(msg32, key):
     return feistel_perm(s_block_res)
 
 
+# начальная перестановка IP
+def init_perm(msg64):
+    table = (58, 50, 42, 34, 26, 18, 10, 2,
+             60, 52, 44, 36, 28, 20, 12, 4,
+             62, 54, 46, 38, 30, 22, 14, 6,
+             64, 56, 48, 40, 32, 24, 16, 8,
+             57, 49, 41, 33, 25, 17, 9, 1,
+             59, 51, 43, 35, 27, 19, 11, 3,
+             61, 53, 45, 37, 29, 21, 13, 5,
+             63, 55, 47, 39, 31, 23, 15, 7)
+    return permutation(msg64, table)
+
+
 # конечная перестановка IP^(-1)
 def end_perm(msg64):
     table = (40, 8, 48, 16, 56, 24, 64, 32,
@@ -254,37 +256,67 @@ def end_perm(msg64):
 def encipher(msg, keys):
     result = ""
     blocks64 = split_encode_input(msg)
+    print(blocks64)
     for block in blocks64:
+        print("=====================")
+        print("Блок текста до шифровки: ", block)
         ip_res = init_perm(block)
+        print("Начальная перестановка: ", ip_res)
+        left, right = ip_res[:32], ip_res[32:]
         for i in range(16):
-            left, right = ip_res[:32], ip_res[32:]
+            print("------------------------")
+            print("Ключ: ", keys[i])
             new_left = right
             new_right = xor(left, feistel(right, keys[i]))
-            ip_res = new_left + new_right
-        block_result = ip_res[32:] + ip_res[:32]
+            print("Фейстель: ", feistel(right, keys[i]))
+            left = new_left
+            right = new_right
+            print("Новая левая половина: ", left)
+            print("Новая правая половина: ", right)
+        print("------------------------")
+        block_result = right + left
         block_result = end_perm(block_result)
+        print("Конечная перестановка: ", block_result)
         result += str(hex(int(block_result.encode(), 2)))
+    print("=====================")
     return result
 
 
 def decipher(msg, keys):
     result = []
     blocks64 = split_decode_input(msg)
+    #blocks64 = []
+    #for i in range(len(msg) // 64):
+        #blocks64.append(msg[i * 64: i * 64 + 64])
     for block in blocks64:
+        print("=====================")
+        print("Блок текста до расшифровки: ", block)
         ip_res = init_perm(block)
+        print("Начальная перестановка: ", ip_res)
+        left, right = ip_res[:32], ip_res[32:]
         for i in range(15, -1, -1):
-            left, right = ip_res[:32], ip_res[32:]
+            print("------------------------")
+            print("Ключ: ", keys[i])
             new_left = right
             new_right = xor(left, feistel(right, keys[i]))
-            ip_res = new_left + new_right
-        block_result = ip_res[32:] + ip_res[:32]
+            print("Фейстель: ", feistel(right, keys[i]))
+            left = new_left
+            right = new_right
+            print("Новая левая половина: ", left)
+            print("Новая правая половина: ", right)
+        print("------------------------")
+        block_result = right + left
         block_result = end_perm(block_result)
+        print("Конечная перестановка: ", block_result)
         for i in range(0, len(block_result), 8):
             result.append(block_result[i: i + 8])
-    result = replace(result)
+    print("=====================")
+    print("Двоичная расшифровка: ", result)
+    #result = replace(result)
     while result[-1] == "00000000":
         result.pop()
-    return bit_decode(result)
+    decoded = bit_decode(result)
+    return decoded
 
 
 if __name__ == '__main__':
