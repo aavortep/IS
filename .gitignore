@@ -1,6 +1,7 @@
 *.txt
 *.exe
 *.jpg
+*.png
 *.zip
 
 # Byte-compiled / optimized / DLL files
