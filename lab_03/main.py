@@ -5,7 +5,7 @@ def read_file(filename):
     f = open(filename, 'rb')
     msg = ''
     for line in f:
-        msg += "".join(map(chr, line))  # декодирование строки байтов в строковый объект
+        msg += line.decode('ISO-8859-1')  # декодирование строки байтов в строковый объект
     f.close()
     return msg
 
@@ -13,7 +13,7 @@ def read_file(filename):
 def write_file(filename, msg):
     f = open(filename, 'wb')
     for symb in msg:
-        bt = symb.encode('utf-8')  # кодирование строки в байты
+        bt = symb.encode('ISO-8859-1')  # кодирование строки в байты
         f.write(bt)
     f.close()
 
@@ -36,7 +36,7 @@ def bit_decode(s):
     res = ''
     for b in s:
         to_int = int(b, 2)
-        res += chr(to_int)  # пытается использовать кодировку 1252 вместо 1251!!!
+        res += chr(to_int)
     return res
 
 
@@ -352,14 +352,14 @@ if __name__ == '__main__':
 
     encipher_msg = encipher(msg, keys)
     print("Зашифрованное сообщение: " + encipher_msg)
-    #write_file(filename, encipher_msg)
+    write_file(filename, encipher_msg)
 
     flag = input("Расшифровать сообщение? (y - да, n - нет):  ")
     if flag == "y":
-        #msg = read_file(filename)
-        decipher_msg = decipher(encipher_msg, keys)
+        msg = read_file(filename)
+        decipher_msg = decipher(msg, keys)
         #decipher_msg = join_bytes(decipher_msg)
         decoded = bit_decode(decipher_msg)
         write_file(filename, decoded)
         #write_file("output_log.txt", decipher_msg)
-        print("Расшифрованное сообщение: ", decipher_msg)
+        print("Расшифрованное сообщение: ", decoded)
