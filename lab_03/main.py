@@ -317,7 +317,7 @@ def decipher(msg, keys):
     return result
 
 
-def join_bytes(deciphered):
+'''def join_bytes(deciphered):
     inds_to_delete = []
     for i in range(len(deciphered) - 1):
         # использовалась 16-битная кодировка
@@ -340,7 +340,7 @@ def join_bytes(deciphered):
             inds_to_delete.append(i+3)
     for i in range(len(inds_to_delete) - 1, -1, -1):
         deciphered.pop(inds_to_delete[i])
-    return deciphered
+    return deciphered'''
 
 
 if __name__ == '__main__':
