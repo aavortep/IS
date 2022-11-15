@@ -38,11 +38,22 @@ def eratosfen():
     return primes
 
 
+# расширенный алгоритм Евклида
+def ext_euclid(a, b):
+    if b == 0:
+        return a, 1, 0
+    else:
+        gcd, x, y = ext_euclid(b, a % b)
+        return gcd, y, x - y * (a // b)
+
+
 # открытый ключ
 def get_e(fi):
-    e = random.randint(0, n_prime)
-    while math.gcd(e, fi) != 1:
-        e = random.randint(0, n_prime)
+    e = random.randint(0, fi)
+    gcd, x, y = ext_euclid(fi, e)
+    while gcd != 1:
+        e = random.randint(0, fi)
+        gcd, x, y = ext_euclid(fi, e)
     return e
 
 
