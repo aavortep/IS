@@ -38,13 +38,15 @@ def eratosfen():
     return primes
 
 
-# расширенный алгоритм Евклида
+# расширенный алгоритм Евклида (x * a + y * b = НОД)
 def ext_euclid(a, b):
-    if b == 0:
-        return a, 1, 0
-    else:
-        gcd, x, y = ext_euclid(b, a % b)
-        return gcd, y, x - y * (a // b)
+    x, y, c, d = 1, 0, 0, 1  # первая матрица Е
+    while b:
+        q = a // b
+        a, b = b, a % b
+        x, y = y, x - q * y  # умножение Е на матрицу [[0, 1], [1, -q]]
+        c, d = d, c - q * d
+    return a, x, y  # a - искомый НОД
 
 
 # открытый ключ
