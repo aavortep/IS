@@ -12,7 +12,7 @@ def check_signature(data):
     signature = open('signature.txt', 'rb').read()
 
     try:
-        pkcs1_15.new(public_key).verify(hash, signature)  # проверка подписи
+        pkcs1_15.new(public_key).verify(hash, signature)  # проверка подписи (расшифровка)
         print("Проверка подписи успешно пройдена")
     except (ValueError, TypeError):
         print("Проверка подписи НЕ пройдена!")
