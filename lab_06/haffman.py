@@ -148,5 +148,5 @@ if __name__ == '__main__':
         decompressed = ""
         while index < len(binary) - 1:
             index, decompressed = decompress(binary, deserial, index, decompressed)
-        print(decompressed)
+        #print(decompressed)
         write_file("decompressed_" + filename, decompressed)
